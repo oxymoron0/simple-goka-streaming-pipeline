@@ -1,0 +1,12 @@
+kafka:
+  brokers:
+    - example.com:9094
+    - example.com:9095
+    - example.com:9096
+  sasl:
+    enable: false
+    user: "sasl_user"
+    password: "sasl_password"
+    mechanism: "PLAIN"
+  tls:
+    enable: false

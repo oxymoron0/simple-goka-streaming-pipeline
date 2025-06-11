@@ -12,7 +12,6 @@ import (
 // KafkaConfig 구조체
 type KafkaConfig struct {
 	Brokers []string `yaml:"brokers"`
-	Group   string   `yaml:"group"`
 	SASL    struct {
 		Enable    bool   `yaml:"enable"`
 		User      string `yaml:"user"`
