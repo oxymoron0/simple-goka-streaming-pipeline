@@ -1,0 +1,23 @@
+{
+  "SensorID": "AST_DS7.1_TEST",
+  "MessageMetadata": {
+    "MessageID": "38dbca2b-e17c-45fe-8730-a339a712c690",
+    "MessageTimestamp": "2025-06-11 20:05:28.023 +0000 UTC",
+    "SourceTimestamp": "2025-06-11 20:05:27.739185385 +0000 UTC",
+    "SourceWidth": 1920,
+    "SourceHeight": 1080
+  },
+  "Fire": [
+    {
+      "ObjectID": 0,
+      "Smoking": false,
+      "BBox": {
+        "X": 1471,
+        "Y": 154,
+        "Width": 83,
+        "Height": 110
+      },
+      "Confidence": 0.99560546875
+    }
+  ]
+}
