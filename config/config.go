@@ -29,10 +29,10 @@ type AppConfig struct {
 }
 
 // InitGlobalConfig 함수 - Sarama 설정을 초기화하고 전역 설정을 적용
-func InitConfig() (*sarama.Config, error) {
+func InitConfig() ([]string, *sarama.Config, error) {
 	cfg, err := loadConfig("config/config.yaml")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	config := goka.DefaultConfig()
 
@@ -53,7 +53,7 @@ func InitConfig() (*sarama.Config, error) {
 
 	// 전역 설정 적용
 	goka.ReplaceGlobalConfig(config)
-	return config, nil
+	return cfg.Kafka.Brokers, config, nil
 }
 
 // LoadConfig 함수
