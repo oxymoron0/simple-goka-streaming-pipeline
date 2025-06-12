@@ -2,7 +2,8 @@ package state
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/lovoo/goka"
@@ -11,53 +12,86 @@ import (
 )
 
 var (
-	group goka.Group = "fireState"
-	Table goka.Table = goka.GroupTable(group)
+	group          goka.Group = "fireState"
+	FireStateTable goka.Table = goka.GroupTable(group)
 )
 
-// 센서 ID 별 State
-// 최근 10초 내 화재 알림 여부
-// 10초 간 화재 관련 데이터
-func collect(ctx goka.Context, msg interface{}) {
-	// Context에서 메세지 읽고 ml에 업데이트
-	var ml []messaging.FireMessageCodec
-	if v := ctx.Value(); v != nil {
-		ml = v.([]messaging.FireMessageCodec)
+// 이진 탐색으로 5분 이내의 첫 번째 메시지 인덱스 찾기
+func findCutoffIndex(messages []FireMessageInfo, cutoffTime time.Time) int {
+	left, right := 0, len(messages)-1
+
+	// 모든 메시지가 5분 이전이면
+	if len(messages) == 0 || messages[right].Timestamp.Before(cutoffTime) {
+		return len(messages)
 	}
 
-	// msg를 Message로 타입 변환(타입 단언)
-	m := msg.(*messaging.FireMessageCodec)
+	// 모든 메시지가 5분 이내면
+	if messages[left].Timestamp.After(cutoffTime) {
+		return 0
+	}
 
-	// 메세지 갱신 및 ml 추가
-	ml = append(ml, *m)
+	// 이진 탐색
+	for left < right {
+		mid := (left + right) / 2
 
-	// 갱신된 ml을 Context에 덮어쓰기
-	ctx.SetValue(ml)
+		if messages[mid].Timestamp.After(cutoffTime) {
+			right = mid
+		} else {
+			left = mid + 1
+		}
+	}
+
+	return left
+}
+
+func collect(ctx goka.Context, msg interface{}) {
+	// 현재 메시지를 FireMessage로 타입 단언
+	fireMsg, ok := msg.(messaging.FireMessage)
+	if !ok {
+		return
+	}
+	fmt.Println(fireMsg)
+
+	// 현재 상태 가져오기
+	var state FireState
+	if v := ctx.Value(); v != nil {
+		state = v.(FireState)
+	} else {
+		// 최초 상태 초기화
+		state = FireState{
+			SensorID:           fireMsg.SensorID,
+			LastFireDetection:  fireMsg.MessageMetadata.SourceTimestamp,
+			FireDetectionCount: 0,
+			RecentFireMessages: make([]FireMessageInfo, 0),
+		}
+	}
+
+	// 상태 업데이트
+	state.LastFireDetection = fireMsg.MessageMetadata.SourceTimestamp
+	state.FireDetectionCount++
+
+	// RecentFireMessages 업데이트
+	// 1. 새로운 메시지 추가
+	for _, fireInfo := range fireMsg.Fire {
+		newMsg := FireMessageInfo{
+			Timestamp:   fireMsg.MessageMetadata.SourceTimestamp,
+			FireMessage: fireInfo,
+		}
+		state.RecentFireMessages = append(state.RecentFireMessages, newMsg)
+	}
+
+	// 2. 5분이 지난 메시지 제거 (이진 탐색 사용)
+	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
+	cutoffIndex := findCutoffIndex(state.RecentFireMessages, fiveMinutesAgo)
+	state.RecentFireMessages = state.RecentFireMessages[cutoffIndex:]
+
+	// 상태 저장
+	fmt.Println(state)
+	ctx.SetValue(state)
 }
 
 func PrepareTopics(brokers []string, config *sarama.Config) {
 	topicinit.EnsureStreamExists(string(messaging.FireDetectionStream), brokers, config)
-}
-
-// 실시간 모니터링: 현재 화재 상태 | N 분 내 화재 알림 여부
-// 이력, 통계: 누적 화재 감지 메세지 수 | 최근 화재 감지 시각
-// 센서 상태 => How to collect?
-type FireState struct {
-	SensorID      string
-	FireDetection bool
-	FireData      []messaging.FireMessageCodec
-}
-
-type FireStateCodec struct{}
-
-func (c *FireStateCodec) Encode(value interface{}) ([]byte, error) {
-	return json.Marshal(value)
-}
-
-func (c *FireStateCodec) Decode(data []byte) (interface{}, error) {
-	var fireState FireState
-	err := json.Unmarshal(data, &fireState)
-	return fireState, err
 }
 
 func Run(ctx context.Context, brokers []string) func() error {
