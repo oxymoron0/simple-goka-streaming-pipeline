@@ -76,7 +76,7 @@ func fireTransporter(ctx goka.Context, msg interface{}) {
 		fmt.Println("error converting to fire message:", err)
 		return
 	}
-	fmt.Printf("emit message to FireDetectionStream: \n%+v\n", fireMsg)
+	// fmt.Printf("emit message to FireDetectionStream: \n%+v\n", fireMsg)
 	// emit message to FireDetectionStream: {AST_DS7.1_TEST {b2231c8c-ae94-4c11-bf06-5d81015330a9 2025-06-11 19:58:19.028 +0000 UTC 2025-06-11 19:58:18.737523708 +0000 UTC 1920 1080} [{0 false {1009 217 28 37} 0.99853515625}]}
 	ctx.Emit(messaging.FireDetectionStream, ValidMsg.InferenceResult.ID, fireMsg)
 }
