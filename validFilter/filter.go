@@ -25,7 +25,7 @@ func validFilter(ctx goka.Context, msg interface{}) {
 	if !ok {
 		return
 	}
-	// fmt.Println("originMsg", originMsg)
+	// fmt.Printf("originMsg: %+v\n", originMsg)
 	// originMsg {6d869d24-9fea-4f9a-978b-c85cc93b9693 2025-06-11 19:55:23.028 +0000 UTC 2025-06-11 19:55:22.73788723 +0000 UTC 1920 1080 fire detection {AST_DS7.1_TEST [map[classID:0 confidence:0.99951171875 height:38 left:1009 objectID:0 top:216 width:28]]}}
 	if shouldDrop(originMsg.InferenceResult.DetectionInfo) {
 		return
