@@ -1,4 +1,4 @@
-package state
+package fire
 
 import (
 	"encoding/json"
