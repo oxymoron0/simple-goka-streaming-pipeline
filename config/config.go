@@ -51,6 +51,10 @@ func InitConfig() ([]string, *sarama.Config, error) {
 	// TLS 활성화
 	config.Net.TLS.Enable = cfg.Kafka.TLS.Enable
 
+	// 초기 오프셋 설정
+	// config.Consumer.Offsets.Initial = sarama.OffsetOldest
+	config.Consumer.Offsets.Initial = sarama.OffsetNewest
+
 	// 전역 설정 적용
 	goka.ReplaceGlobalConfig(config)
 	return cfg.Kafka.Brokers, config, nil
