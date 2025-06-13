@@ -10,8 +10,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/oxymoron0/simple-goka-streaming-pipeline/config"
-	"github.com/oxymoron0/simple-goka-streaming-pipeline/state"
-	"github.com/oxymoron0/simple-goka-streaming-pipeline/transporter"
+	"github.com/oxymoron0/simple-goka-streaming-pipeline/inference/fire"
 	"github.com/oxymoron0/simple-goka-streaming-pipeline/validFilter"
 	"golang.org/x/sync/errgroup"
 )
@@ -37,10 +36,10 @@ func main() {
 		validFilter.PrepareTopics(brokers, cfg)
 	}
 	if *runFireTransporter {
-		transporter.PrepareFireTopics(brokers, cfg)
+		fire.PrepareFireTopics(brokers, cfg)
 	}
 	if *runFireState {
-		state.PrepareTopics(brokers, cfg)
+		fire.PrepareTopics(brokers, cfg)
 	}
 	if *runFilter {
 		log.Println("starting filter")
@@ -48,11 +47,11 @@ func main() {
 	}
 	if *runFireTransporter {
 		log.Println("starting fire transporter")
-		grp.Go(transporter.RunFireTransporter(ctx, brokers))
+		grp.Go(fire.RunTransporter(ctx, brokers))
 	}
 	if *runFireState {
 		log.Println("starting fire state")
-		grp.Go(state.Run(ctx, brokers))
+		grp.Go(fire.RunState(ctx, brokers))
 	}
 	// Wait for SIGINT/SIGTERM
 	waiter := make(chan os.Signal, 1)
