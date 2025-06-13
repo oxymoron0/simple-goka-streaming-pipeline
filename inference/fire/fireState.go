@@ -1,4 +1,4 @@
-package state
+package fire
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	group          goka.Group = "fireState"
-	FireStateTable goka.Table = goka.GroupTable(group)
+	stateGroup     goka.Group = "fire-state"
+	FireStateTable goka.Table = goka.GroupTable(stateGroup)
 )
 
 // 이진 탐색으로 5분 이내의 첫 번째 메시지 인덱스 찾기
@@ -50,12 +50,19 @@ func collect(ctx goka.Context, msg interface{}) {
 	if !ok {
 		return
 	}
-	fmt.Println(fireMsg)
+	// fmt.Println(fireMsg)
+	// {AST_DS7.1_TEST {f0304aa9-a832-4701-9c51-db4cfe3107ef 2025-06-13 00:22:27.062 +0000 UTC 2025-06-13 00:22:26.452299889 +0000 UTC 1920 1080} [{0 false {1052 374 17 27} 0.90625}]}
 
 	// 현재 상태 가져오기
 	var state FireState
 	if v := ctx.Value(); v != nil {
 		state = v.(FireState)
+		// state = FireState{
+		// 	SensorID:           fireMsg.SensorID,
+		// 	LastFireDetection:  fireMsg.MessageMetadata.SourceTimestamp,
+		// 	FireDetectionCount: 0,
+		// 	RecentFireMessages: make([]FireMessageInfo, 0),
+		// }
 	} else {
 		// 최초 상태 초기화
 		state = FireState{
@@ -80,13 +87,15 @@ func collect(ctx goka.Context, msg interface{}) {
 		state.RecentFireMessages = append(state.RecentFireMessages, newMsg)
 	}
 
-	// 2. 5분이 지난 메시지 제거 (이진 탐색 사용)
+	// // 2. 5분이 지난 메시지 제거 (이진 탐색 사용)
 	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
 	cutoffIndex := findCutoffIndex(state.RecentFireMessages, fiveMinutesAgo)
 	state.RecentFireMessages = state.RecentFireMessages[cutoffIndex:]
 
 	// 상태 저장
-	fmt.Println(state)
+	fmt.Println("time", fiveMinutesAgo)
+	fmt.Println("cutoffIndex", cutoffIndex)
+	fmt.Println("state", state)
 	ctx.SetValue(state)
 }
 
@@ -94,9 +103,9 @@ func PrepareTopics(brokers []string, config *sarama.Config) {
 	topicinit.EnsureStreamExists(string(messaging.FireDetectionStream), brokers, config)
 }
 
-func Run(ctx context.Context, brokers []string) func() error {
+func RunState(ctx context.Context, brokers []string) func() error {
 	return func() error {
-		g := goka.DefineGroup(group,
+		g := goka.DefineGroup(stateGroup,
 			goka.Input(messaging.FireDetectionStream, new(messaging.FireMessageCodec), collect),
 			goka.Persist(new(FireStateCodec)),
 		)
