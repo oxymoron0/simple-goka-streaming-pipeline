@@ -1,0 +1,1 @@
+go run cmd/processor/main.go -filter -fire -fireState
